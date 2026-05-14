@@ -1,0 +1,115 @@
+using FluentAssertions;
+using HermesAgent.Agent;
+using HermesAgent.Core.Abstractions;
+using HermesAgent.Core.Configuration;
+using HermesAgent.Core.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using NSubstitute;
+using Xunit;
+
+namespace HermesAgent.Core.Tests;
+
+public class AgentLoopTests
+{
+    private readonly ILlmProvider _llm = Substitute.For<ILlmProvider>();
+    private readonly IMemoryStore _memory = Substitute.For<IMemoryStore>();
+    private readonly ISkillManager _skills = Substitute.For<ISkillManager>();
+    private readonly ISessionManager _sessions = Substitute.For<ISessionManager>();
+    private readonly IContextCompressor _compressor = Substitute.For<IContextCompressor>();
+    private readonly ISystemPromptBuilder _promptBuilder = Substitute.For<ISystemPromptBuilder>();
+    private readonly IOptions<HermesOptions> _options;
+    private readonly ILogger<HermesAgentLoop> _logger = Substitute.For<ILogger<HermesAgentLoop>>();
+
+    public AgentLoopTests()
+    {
+        var hermesOptions = new HermesOptions
+        {
+            Agent = new AgentOptions { MaxTurns = 5 }
+        };
+        _options = Options.Create(hermesOptions);
+        
+        _sessions.StartSessionAsync(Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(new Conversation());
+        _promptBuilder.BuildAsync(Arg.Any<Conversation>(), Arg.Any<CancellationToken>())
+            .Returns("You are Hermes.");
+    }
+
+    [Fact]
+    public async Task RunAsync_ReturnsLlmResponse()
+    {
+        // Arrange
+        var loop = new HermesAgentLoop(_llm, [], _memory, _skills, _sessions, _compressor, _promptBuilder, _options, _logger);
+        
+        _llm.CompleteAsync(Arg.Any<IReadOnlyList<Message>>(), Arg.Any<IReadOnlyList<ToolDefinition>>(), Arg.Any<CancellationToken>())
+            .Returns(new LlmResponse { Content = "Hello, world!", FinishReason = "stop" });
+
+        // Act
+        var result = await loop.RunAsync("Hi");
+
+        // Assert
+        result.FinalResponse.Should().Be("Hello, world!");
+        result.TurnsUsed.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RunAsync_ExecutesTool_WhenRequested()
+    {
+        // Arrange
+        var tool = Substitute.For<ITool>();
+        tool.Name.Returns("calc");
+        tool.Definition.Returns(new ToolDefinition { 
+            Name = "calc", 
+            Description = "Add", 
+            Parameters = new Dictionary<string, ParameterDefinition>() 
+        });
+        tool.ExecuteAsync(Arg.Any<ToolCall>(), Arg.Any<CancellationToken>())
+            .Returns(new ToolResult { ToolCallId = "1", ToolName = "calc", Output = "4", Duration = TimeSpan.FromMilliseconds(10) });
+
+        var loop = new HermesAgentLoop(_llm, [tool], _memory, _skills, _sessions, _compressor, _promptBuilder, _options, _logger);
+
+        // Turn 1: Return a tool call
+        // Turn 2: Final stop
+        _llm.CompleteAsync(Arg.Any<IReadOnlyList<Message>>(), Arg.Any<IReadOnlyList<ToolDefinition>>(), Arg.Any<CancellationToken>())
+            .Returns(
+                new LlmResponse 
+                { 
+                    Content = "Thinking...", 
+                    ToolCalls = [new ToolCall { Id = "1", Name = "calc", Arguments = new Dictionary<string, object?>() }],
+                    FinishReason = "tool_use"
+                },
+                new LlmResponse 
+                { 
+                    Content = "The answer is 4", 
+                    FinishReason = "stop" 
+                }
+            );
+
+        // Act
+        var result = await loop.RunAsync("What is 2+2?");
+
+        // Assert
+        result.TurnsUsed.Should().Be(2);
+        result.ToolResults.Should().HaveCount(1);
+        result.ToolResults[0].Output.Should().Be("4");
+    }
+
+    [Fact]
+    public async Task RunAsync_UsesExistingSession_WhenProvided()
+    {
+        // Arrange
+        var sessionId = Guid.NewGuid();
+        var session = new Conversation(sessionId);
+        _sessions.LoadSessionAsync(sessionId, Arg.Any<CancellationToken>()).Returns(session);
+
+        var loop = new HermesAgentLoop(_llm, [], _memory, _skills, _sessions, _compressor, _promptBuilder, _options, _logger);
+        _llm.CompleteAsync(Arg.Any<IReadOnlyList<Message>>(), Arg.Any<IReadOnlyList<ToolDefinition>>(), Arg.Any<CancellationToken>())
+            .Returns(new LlmResponse { Content = "Ack", FinishReason = "stop" });
+
+        // Act
+        await loop.RunAsync("test", sessionId);
+
+        // Assert
+        await _sessions.Received().LoadSessionAsync(sessionId, Arg.Any<CancellationToken>());
+    }
+}
