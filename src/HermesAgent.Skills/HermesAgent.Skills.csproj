@@ -11,6 +11,6 @@
   <ItemGroup>
     <ProjectReference Include="..\HermesAgent.Core\HermesAgent.Core.csproj" />
     <ProjectReference Include="..\HermesAgent.Tools\HermesAgent.Tools.csproj" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
   </ItemGroup>
 </Project>

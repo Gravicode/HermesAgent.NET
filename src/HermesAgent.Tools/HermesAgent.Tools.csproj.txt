@@ -4,14 +4,14 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>preview</LangVersion>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-    <RootNamespace>HermesAgent.Memory</RootNamespace>
+    <RootNamespace>HermesAgent.Tools</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.49.0" />
+    <PackageReference Include="OpenAI" Version="2.1.0" />
     <ProjectReference Include="..\HermesAgent.Core\HermesAgent.Core.csproj" />
-    <ProjectReference Include="..\HermesAgent.Tools\HermesAgent.Tools.csproj" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.1" />
   </ItemGroup>
 </Project>

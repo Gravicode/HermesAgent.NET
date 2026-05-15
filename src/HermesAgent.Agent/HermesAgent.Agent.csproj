@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
@@ -13,9 +13,9 @@
     <ProjectReference Include="..\HermesAgent.Tools\HermesAgent.Tools.csproj" />
     <ProjectReference Include="..\HermesAgent.Skills\HermesAgent.Skills.csproj" />
     <ProjectReference Include="..\HermesAgent.Memory\HermesAgent.Memory.csproj" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="9.0.1" />
     <PackageReference Include="Polly.Core" Version="8.4.1" />
   </ItemGroup>
 </Project>
